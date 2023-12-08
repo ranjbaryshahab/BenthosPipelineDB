@@ -1,0 +1,19 @@
+input:
+  label: "kafka_input"
+  kafka:
+    addresses: [ "${KAFKA_BOOTSTRAP_SERVERS}" ]
+    topics: [ "${KAFKA_TOPIC}" ]
+    consumer_group: "${BENTHOS_CONSUMER_GROUP}"
+    checkpoint_limit: 1024
+
+output:
+  sql_insert:
+    driver: postgres
+    dsn: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_SERVER}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable"
+    table: "${POSTGRES_TABLE}"
+    columns: [ name, age ]
+    args_mapping: |
+      root = [
+        this.name.string(),
+        this.age.number()
+      ]

@@ -1,0 +1,66 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:14-alpine
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres/data:/var/lib/postgresql/data
+      - ./postgres/sql/create_table.sql:/docker-entrypoint-initdb.d/create_table.sql
+    env_file:
+      - config.env
+    networks:
+      - stream-net
+
+  zookeeper:
+    image: wurstmeister/zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    networks:
+      - stream-net
+
+  kafka:
+    image: wurstmeister/kafka
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    env_file:
+      - config.env
+    networks:
+      - stream-net
+    depends_on:
+      - zookeeper
+
+  kafka-producer:
+    container_name: kafka-producer
+    build: ./data-producer
+    depends_on:
+      - kafka
+    env_file:
+      - config.env
+    networks:
+      - stream-net
+
+  benthos:
+    container_name: benthos
+    image: jeffail/benthos
+    ports:
+      - "4195:4195"
+    networks:
+      - stream-net
+    env_file:
+      - config.env
+    volumes:
+      - ./pipeline:/pipeline
+    depends_on:
+      - kafka
+      - postgres
+      - zookeeper
+    command: ["-c", "/pipeline/benthos.yml"]
+
+networks:
+  stream-net:
+    driver: bridge
